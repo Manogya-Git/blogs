@@ -1,0 +1,32 @@
+# =====================
+# Django / Backend
+# =====================
+__pycache__/
+*.pyc
+db.sqlite3
+*.log
+.env
+venv/
+env/
+*.pot
+*.py[cod]
+
+# Django migrations (optional - usually keep, but ignore if you want clean repo)
+# */migrations/*
+
+# =====================
+# React / Frontend
+# =====================
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.development
+.env.production
+
+# =====================
+# System files
+# =====================
+.DS_Store
+Thumbs.db
