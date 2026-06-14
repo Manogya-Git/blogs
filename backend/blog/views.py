@@ -10,9 +10,16 @@ from django.http import HttpResponse
 
 @api_view(['GET'])
 def get_blog(request):
-    blogs = Blog.objects.all().order_by('updated_at')
+    search = request.query_params.get('search', None)
+
     posts = Blog.objects.filter(status='Published')
-    serializer = BlogSerializer(posts,many=True)
+
+    if search:
+        posts = posts.filter(title__icontains=search)
+
+    posts = posts.order_by('-updated_at')
+
+    serializer = BlogSerializer(posts, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])

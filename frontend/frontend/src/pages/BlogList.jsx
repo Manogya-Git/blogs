@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import BlogCard from "../components/BlogCard";
-
+import Navbar from "../components/Navbar";
 
 const BlogList = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
 
   const BASEURL = import.meta.env.VITE_DJANGO_BASE_URL;
 
-
   useEffect(() => {
-    fetch(`${BASEURL}/api/blogs/`)
+    fetch(`${BASEURL}/api/blogs/?search=${search}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("failed to fetch blogs");
@@ -27,7 +28,7 @@ const BlogList = () => {
         setError(error.message);
         setLoading(false);
       });
-  }, []);
+  }, [search]);
 
   if (loading) {
     return (
@@ -56,13 +57,35 @@ const BlogList = () => {
           {/* Title */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              <Link to="/" className="hover:text-blue-600 transition">
+              <Link
+                to="/"
+                onClick={() => {
+                  setSearch("");
+                  setSearchInput("");
+                }}
+                className="hover:text-blue-600 transition"
+              >
                 Latest Blogs
               </Link>
             </h1>
             <p className="text-gray-500 text-sm mt-1">
               Explore insights, technology, and ideas
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search blogs..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={() => setSearch(searchInput)}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Search
+            </button>
           </div>
 
           {/* Auth Buttons */}
@@ -84,6 +107,7 @@ const BlogList = () => {
         </div>
       </div>
 
+      <Navbar />
 
       {/* Blog Grid */}
       <div className="max-w-7xl mx-auto px-6 py-10">
