@@ -1,11 +1,16 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { clearTokens, getAccessToken } from "../utils/auth";
+
 
 function Navbar() {
   const BASEURL = import.meta.env.VITE_DJANGO_BASE_URL;
   const location = useLocation();
+  const navigate = useNavigate();
+
 
   const [navCategories, setNavCategories] = useState([]);
+
 
   useEffect(() => {
     async function loadCategories() {
@@ -33,6 +38,13 @@ function Navbar() {
     const match = location.pathname.match(/^\/category\/(\d+)\/?$/);
     return match ? Number(match[1]) : null;
   }, [location.pathname]);
+
+
+  const isLoggedIn = !!getAccessToken();
+  const handleLogout = () => {
+    clearTokens();
+    navigate('/login');
+  }
 
   return (
     <nav className="bg-white shadow px-6 py-3 flex justify-center gap-4 overflow-x-auto">

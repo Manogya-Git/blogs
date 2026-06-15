@@ -21,7 +21,7 @@ STATUS_CHOICE = (
 
 class Blog(models.Model):
     title = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=150,unique=True)
+    slug = models.SlugField(max_length=150,unique=True,blank=True)
     category = models.ForeignKey(Category,on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     featured_image = models.ImageField(upload_to='uploads/%Y/%m/%d')
@@ -31,7 +31,17 @@ class Blog(models.Model):
     created_at =  models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self,*args,**kwargs):
+        if not self.slug:
+            base_slug = slugigy(self.title)
+            slug = base_slug
 
+            while Blog.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{uuid.uuid4().hex[:6]}"
+            self.slug = slug
+        super().save(*args, **kwargs)
+    
+    
     def __str__(self):
         return self.title
     
