@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils.text import slugify
 # Create your models here.
 class Category(models.Model):
     category_name = models.CharField(max_length=50,unique=True)
@@ -33,7 +33,7 @@ class Blog(models.Model):
 
     def save(self,*args,**kwargs):
         if not self.slug:
-            base_slug = slugigy(self.title)
+            base_slug = slugify(self.title)
             slug = base_slug
 
             while Blog.objects.filter(slug=slug).exists():

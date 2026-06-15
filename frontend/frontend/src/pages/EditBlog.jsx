@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { authFetch, isLoggedIn } from "../utils/auth";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { authFetch, isLoggedIn, getCurrentUser } from "../utils/auth";
 
-const CreateBlog = () => {
+const EditBlog = () => {
   const BASEURL = import.meta.env.VITE_DJANGO_BASE_URL;
+  const { id } = useParams();
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true); 
+  const [image, setImage] = useState(null);
+  const [currentImage, setCurrentImage] = useState(""); 
   const [form, setForm] = useState({
     title: "",
     short_description: "",
@@ -15,20 +19,52 @@ const CreateBlog = () => {
     status: "Published",
     category_id: "",
   });
-  const [image, setImage] = useState(null);
 
-  // redirect if not logged in
+  
   useEffect(() => {
     if (!isLoggedIn()) navigate("/login");
   }, []);
 
-  // fetch categories for dropdown
+ 
   useEffect(() => {
     fetch(`${BASEURL}/api/categories/`)
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch(() => setError("Failed to load categories"));
   }, []);
+
+ 
+  useEffect(() => {
+    const fetchBlog = async () => {
+      try {
+        const res = await fetch(`${BASEURL}/api/blogs/${id}/detail/`);
+        const data = await res.json();
+
+        // check if current user is the author
+        const currentUser = getCurrentUser();
+        if (data.author?.id !== currentUser.id) {
+          navigate("/"); // not the author, go home
+          return;
+        }
+
+        // pre-fill form with existing values
+        setForm({
+          title: data.title,
+          short_description: data.short_description,
+          blog_body: data.blog_body,
+          status: data.status,
+          category_id: data.category?.id || "",
+        });
+
+        setCurrentImage(data.featured_image); // save existing image URL
+      } catch (err) {
+        setError("Failed to load blog");
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchBlog();
+  }, [id]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -39,26 +75,24 @@ const CreateBlog = () => {
     setError("");
     setLoading(true);
 
-    // use FormData because we have a file
     const formData = new FormData();
     formData.append("title", form.title);
     formData.append("short_description", form.short_description);
     formData.append("blog_body", form.blog_body);
     formData.append("status", form.status);
     formData.append("category_id", form.category_id);
-    if (image) formData.append("featured_image", image);
+    if (image) formData.append("featured_image", image); // only if new image selected
 
     try {
-      const res = await authFetch(`${BASEURL}/api/blogs/create/`, {
-        method: "POST",
+      const res = await authFetch(`${BASEURL}/api/blogs/${id}/edit/`, {
+        method: "PATCH",
         body: formData,
-        // don't set Content-Type, browser sets it automatically for FormData
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        navigate(`/single_blog/${data.slug}`); // go to the new blog
+        navigate(`/single_blog/${data.slug}`);
       } else {
         setError(JSON.stringify(data));
       }
@@ -69,6 +103,13 @@ const CreateBlog = () => {
     }
   };
 
+  // show loading while fetching existing blog
+  if (fetching) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-gray-500 animate-pulse">Loading blog...</p>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100">
 
@@ -78,15 +119,15 @@ const CreateBlog = () => {
           <h1 className="text-3xl font-bold text-gray-900">
             <Link to="/" className="hover:text-blue-600 transition">Latest Blogs</Link>
           </h1>
-          <Link to="/" className="text-sm text-gray-500 hover:text-black transition">
-            ← Back to blogs
+          <Link to="/my-blogs" className="text-sm text-gray-500 hover:text-black transition">
+            ← Back to my blogs
           </Link>
         </div>
       </div>
 
       {/* Form */}
       <div className="max-w-2xl mx-auto px-6 py-10">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Write a New Blog</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Blog</h2>
 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
@@ -99,7 +140,6 @@ const CreateBlog = () => {
               value={form.title}
               onChange={handleChange}
               required
-              placeholder="Enter blog title"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -130,7 +170,6 @@ const CreateBlog = () => {
               onChange={handleChange}
               required
               rows={3}
-              placeholder="Brief summary of your blog"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -143,20 +182,30 @@ const CreateBlog = () => {
               onChange={handleChange}
               required
               rows={8}
-              placeholder="Write your blog here..."
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Featured Image</label>
+            {/* show existing image */}
+            {currentImage && (
+              <div className="mb-2">
+                <p className="text-xs text-gray-400 mb-1">Current image:</p>
+                <img
+                  src={`${BASEURL}${currentImage}`}
+                  alt="current"
+                  className="w-32 h-20 object-cover rounded-lg"
+                />
+              </div>
+            )}
             <input
               type="file"
               accept="image/*"
               onChange={(e) => setImage(e.target.files[0])}
-              required
               className="w-full text-sm text-gray-500"
             />
+            <p className="text-xs text-gray-400 mt-1">Leave empty to keep current image</p>
           </div>
 
           <div>
@@ -175,9 +224,9 @@ const CreateBlog = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium"
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
           >
-            {loading ? "Publishing..." : "Publish Blog"}
+            {loading ? "Saving..." : "Save Changes"}
           </button>
 
         </form>
@@ -186,4 +235,4 @@ const CreateBlog = () => {
   );
 };
 
-export default CreateBlog;
+export default EditBlog;
